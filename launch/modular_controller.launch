@@ -1,0 +1,9 @@
+<launch>
+  <arg name="robot_name"   default="open_manipulator"/>
+  <arg name="end_effector" default="gripper"/>
+
+  <node name="mdlr_controller" pkg="modular_controller" type="modular_controller" output="screen">
+    <remap from="kinematics_pose" to="$(arg end_effector)/kinematics_pose"/>
+    <param name="end_effector_name" value="$(arg end_effector)"/>
+  </node>
+</launch>

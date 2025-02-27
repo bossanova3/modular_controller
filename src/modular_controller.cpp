@@ -5,7 +5,7 @@
 #include "std_msgs/Float64.h"
 #include "std_msgs/Bool.h"
 
-double roll, pitch, yaw;
+double roll, pitch, yaw, gripper;
 
 void handPoseCallback(const geometry_msgs::Pose::ConstPtr& msg){
     //ROS_INFO("Hand position is \nx=%.2f, y=%.2f, z=%.2f", msg->position.x, msg->position.y, msg->position.z);
@@ -14,9 +14,8 @@ void handPoseCallback(const geometry_msgs::Pose::ConstPtr& msg){
     //ROS_INFO("Hand orientation is \nroll=%.2f, pitch=%.2f, yaw=%.2f", roll, pitch, yaw);
 }
 
-void gripperCallback(const std_msgs::Float64::ConstPtr& msg){
-    std_msgs::Float64 gripper_msg;
-    gripper_msg.data = msg->data ? 0.01 : -0.01;
+void gripperCallback(const std_msgs::Bool::ConstPtr& msg){
+    gripper = (msg->data) ? -0.01 : 0.01;
     //ROS_INFO("Gripper %s", msg->data ? "close" : "open");
 }
 
@@ -326,7 +325,6 @@ void ModularController::setGoal(char ch)
   {
     printf("input : g \topen gripper\n");
     std::vector<double> joint_angle;
-
     joint_angle.push_back(0.01);
     setToolControl(joint_angle);
   }
@@ -435,12 +433,15 @@ void ModularController::setGoal(char ch)
 
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
+    std::vector<double> joint_angle_gripper;
     double path_time = 2.0;
     
     joint_name.push_back("joint1"); joint_angle.push_back(roll);
     joint_name.push_back("joint2"); joint_angle.push_back(pitch);
     joint_name.push_back("joint3"); joint_angle.push_back(0.0);
     joint_name.push_back("joint4"); joint_angle.push_back(0.0);
+    joint_angle_gripper.push_back(gripper);
+    setToolControl(joint_angle_gripper);
     setJointSpacePath(joint_name, joint_angle, path_time);
 
 
@@ -470,6 +471,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "modular_controller");
   ros::NodeHandle nh;
   ros::Subscriber topic_sub = nh.subscribe("hand_pose", 1000, handPoseCallback);
+  ros::Subscriber topic_sub_gripper = nh.subscribe("gripper_state", 1000, gripperCallback);
   //ros::Subscriber topic_subs = nh.subscribe("/gripper_state", 1000, gripperCallback);
 
   ModularController modularController;

@@ -4,8 +4,11 @@
 #include "geometry_msgs/Pose.h"
 #include "std_msgs/Float64.h"
 #include "std_msgs/Bool.h"
+#include "std_msgs/Int32.h"
 
 double roll, pitch, yaw, gripper;
+double j2 = 0, j3 = 0, j4 = 0;
+int servo = 0;
 
 void handPoseCallback(const geometry_msgs::Pose::ConstPtr& msg){
     //ROS_INFO("Hand position is \nx=%.2f, y=%.2f, z=%.2f", msg->position.x, msg->position.y, msg->position.z);
@@ -16,6 +19,11 @@ void handPoseCallback(const geometry_msgs::Pose::ConstPtr& msg){
 
 void gripperCallback(const std_msgs::Bool::ConstPtr& msg){
     gripper = (msg->data) ? -0.01 : 0.01;
+    //ROS_INFO("Gripper %s", msg->data ? "close" : "open");
+}
+
+void servosCallback(const std_msgs::Int32::ConstPtr& msg){
+    servo = msg->data;
     //ROS_INFO("Gripper %s", msg->data ? "close" : "open");
 }
 
@@ -437,9 +445,28 @@ void ModularController::setGoal(char ch)
     double path_time = 2.0;
     
     joint_name.push_back("joint1"); joint_angle.push_back(roll);
-    joint_name.push_back("joint2"); joint_angle.push_back(pitch);
-    joint_name.push_back("joint3"); joint_angle.push_back(0.0);
-    joint_name.push_back("joint4"); joint_angle.push_back(0.0);
+    if(servo == 0)
+    {
+      joint_name.push_back("joint2"); joint_angle.push_back(pitch);
+      joint_name.push_back("joint3"); joint_angle.push_back(j3);
+      joint_name.push_back("joint4"); joint_angle.push_back(j4);
+      j2 = pitch;
+
+    }
+    if(servo == 1)
+    {
+      joint_name.push_back("joint2"); joint_angle.push_back(j2);
+      joint_name.push_back("joint3"); joint_angle.push_back(pitch);
+      joint_name.push_back("joint4"); joint_angle.push_back(j4);
+      j3 = pitch;
+    }
+    if(servo == 2)
+    {
+      joint_name.push_back("joint2"); joint_angle.push_back(j2);
+      joint_name.push_back("joint3"); joint_angle.push_back(j3);
+      joint_name.push_back("joint4"); joint_angle.push_back(pitch);
+      j4 = pitch;
+    }
     joint_angle_gripper.push_back(gripper);
     setToolControl(joint_angle_gripper);
     setJointSpacePath(joint_name, joint_angle, path_time);
@@ -472,6 +499,7 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
   ros::Subscriber topic_sub = nh.subscribe("hand_pose", 1000, handPoseCallback);
   ros::Subscriber topic_sub_gripper = nh.subscribe("gripper_state", 1000, gripperCallback);
+  ros::Subscriber topic_sub_servos = nh.subscribe("selected_joint", 1000, servosCallback);
   //ros::Subscriber topic_subs = nh.subscribe("/gripper_state", 1000, gripperCallback);
 
   ModularController modularController;
@@ -526,6 +554,9 @@ int main(int argc, char **argv)
       modularController.setGoal('8');
       sleep(1);
       tiempoLimite++;
+    }
+    if(tiempoLimite >= 30){
+      printf("Se acabo los 30 segundos de uso");
     }
   }
 

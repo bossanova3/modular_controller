@@ -362,7 +362,7 @@ void ModularController::setGoal(char ch)
 
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
-    double path_time = 2.0;
+    double path_time = 1.0;
     joint_name.push_back("joint1"); joint_angle.push_back(0.0);
     joint_name.push_back("joint2"); joint_angle.push_back(0.0);
     joint_name.push_back("joint3"); joint_angle.push_back(0.0);
@@ -442,7 +442,7 @@ void ModularController::setGoal(char ch)
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
     std::vector<double> joint_angle_gripper;
-    double path_time = 2.0;
+    double path_time = 1.0;
     
     joint_name.push_back("joint1"); joint_angle.push_back(roll);
     if(servo == 0)
@@ -552,11 +552,12 @@ int main(int argc, char **argv)
     while(ch == '8' && tiempoLimite < 30){
       ros::spinOnce();
       modularController.setGoal('8');
-      sleep(1);
+      usleep(700000);
       tiempoLimite++;
     }
     if(tiempoLimite >= 30){
-      printf("Se acabo los 30 segundos de uso");
+      printf("\nSe acabo los 30 segundos de uso");
+      j2, j3, j4 = 0, 0, 0;
     }
   }
 

@@ -549,13 +549,13 @@ int main(int argc, char **argv)
       modularController.setGoal('2');
       sleep(3);
     }
-    while(ch == '8' && tiempoLimite < 30){
+    while(ch == '8' && tiempoLimite < 60){
       ros::spinOnce();
       modularController.setGoal('8');
       usleep(700000);
       tiempoLimite++;
     }
-    if(tiempoLimite >= 30){
+    if(tiempoLimite >= 60){
       printf("\nSe acabo los 30 segundos de uso");
       j2, j3, j4 = 0, 0, 0;
     }

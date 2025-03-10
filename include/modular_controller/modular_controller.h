@@ -6,6 +6,13 @@
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 
+#include "tf/tf.h"
+#include "geometry_msgs/Pose.h"
+
+#include "std_msgs/Float64.h"
+#include "std_msgs/Bool.h"
+#include "std_msgs/Int32.h"
+
 #include "open_manipulator_msgs/SetJointPosition.h"
 #include "open_manipulator_msgs/SetKinematicsPose.h"
 
@@ -36,6 +43,9 @@ class ModularController
   *****************************************************************************/
   std::vector<double> present_joint_angle_;
   std::vector<double> present_kinematic_position_;
+  double roll, pitch, yaw, gripper;
+  double j2, j3, j4;
+  int servo;
 
   /*****************************************************************************
   ** Init Functions
@@ -48,9 +58,15 @@ class ModularController
   *****************************************************************************/
   ros::Subscriber joint_states_sub_;
   ros::Subscriber kinematics_pose_sub_;
+  ros::Subscriber hand_pose_sub_;
+  ros::Subscriber gripper_sub_;
+  ros::Subscriber servos_sub_;
 
   void jointStatesCallback(const sensor_msgs::JointState::ConstPtr &msg);
   void kinematicsPoseCallback(const open_manipulator_msgs::KinematicsPose::ConstPtr &msg);
+  void handPoseCallback(const geometry_msgs::Pose::ConstPtr& msg);
+  void gripperCallback(const std_msgs::Bool::ConstPtr& msg);
+  void servosCallback(const std_msgs::Int32::ConstPtr& msg);
 
   /*****************************************************************************
   ** ROS Clients and Callback Functions
@@ -74,6 +90,14 @@ class ModularController
   void restoreTerminalSettings(void);
   std::vector<double> getPresentJointAngle();
   std::vector<double> getPresentKinematicsPose();
+  double getJ2();
+  double getJ3();
+  double getJ4();
+  double getRoll();
+  double getPitch();
+  double getYaw();
+  double getGripper();
+  int getServo();
 };
 
 #endif //MODULAR_CONTROLLER_H_

@@ -1,31 +1,8 @@
 #include "modular_controller/modular_controller.h"
 #include "ros/ros.h"
 #include "tf/tf.h"
-#include "geometry_msgs/Pose.h"
-#include "std_msgs/Float64.h"
-#include "std_msgs/Bool.h"
-#include "std_msgs/Int32.h"
 
-double roll, pitch, yaw, gripper;
-double j2 = 0, j3 = 0, j4 = 0;
-int servo = 0;
-
-void handPoseCallback(const geometry_msgs::Pose::ConstPtr& msg){
-    //ROS_INFO("Hand position is \nx=%.2f, y=%.2f, z=%.2f", msg->position.x, msg->position.y, msg->position.z);
-    tf::Quaternion q(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
-    tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-    //ROS_INFO("Hand orientation is \nroll=%.2f, pitch=%.2f, yaw=%.2f", roll, pitch, yaw);
-}
-
-void gripperCallback(const std_msgs::Bool::ConstPtr& msg){
-    gripper = (msg->data) ? -0.01 : 0.01;
-    //ROS_INFO("Gripper %s", msg->data ? "close" : "open");
-}
-
-void servosCallback(const std_msgs::Int32::ConstPtr& msg){
-    servo = msg->data;
-    //ROS_INFO("Gripper %s", msg->data ? "close" : "open");
-}
+double j2, j3, j4;
 
 ModularController::ModularController()
 : node_handle_(""),
@@ -36,6 +13,8 @@ ModularController::ModularController()
   ************************************************************/
   present_joint_angle_.resize(NUM_OF_JOINT);
   present_kinematic_position_.resize(3);
+  j2 = 0, j3 = 0, j4 = 0;
+  servo = 0;
 
   /************************************************************
   ** Initialize ROS Subscribers and Clients
@@ -66,6 +45,9 @@ void ModularController::initSubscriber()
 {
   joint_states_sub_ = node_handle_.subscribe("joint_states", 10, &ModularController::jointStatesCallback, this);
   kinematics_pose_sub_ = node_handle_.subscribe("kinematics_pose", 10, &ModularController::kinematicsPoseCallback, this);
+  hand_pose_sub_ = node_handle_.subscribe("hand_pose", 1000, &ModularController::handPoseCallback, this);
+  gripper_sub_ = node_handle_.subscribe("gripper_state", 1000, &ModularController::gripperCallback, this);
+  servos_sub_ = node_handle_.subscribe("selected_joint", 1000, &ModularController::servosCallback, this);
 }
 
 void ModularController::jointStatesCallback(const sensor_msgs::JointState::ConstPtr &msg)
@@ -91,6 +73,19 @@ void ModularController::kinematicsPoseCallback(const open_manipulator_msgs::Kine
   present_kinematic_position_ = temp_position;
 }
 
+void ModularController::handPoseCallback(const geometry_msgs::Pose::ConstPtr& msg){
+  tf::Quaternion q(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
+  tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+}
+
+void ModularController::gripperCallback(const std_msgs::Bool::ConstPtr& msg){
+  gripper = (msg->data) ? -0.01 : 0.01;
+}
+
+void ModularController::servosCallback(const std_msgs::Int32::ConstPtr& msg){
+  servo = msg->data;
+}
+
 std::vector<double> ModularController::getPresentJointAngle()
 {
   return present_joint_angle_;
@@ -99,6 +94,46 @@ std::vector<double> ModularController::getPresentJointAngle()
 std::vector<double> ModularController::getPresentKinematicsPose()
 {
   return present_kinematic_position_;
+}
+
+double ModularController::getRoll()
+{
+  return roll;
+}
+
+double ModularController::getPitch()
+{
+  return pitch;
+}
+
+double ModularController::getYaw()
+{
+  return yaw;
+}
+
+double ModularController::getJ2()
+{
+  return j2;
+}
+
+double ModularController::getJ3()
+{
+  return j3;
+}
+
+double ModularController::getJ4()
+{
+  return j4;
+}
+
+double ModularController::getGripper()
+{
+  return gripper;
+}
+
+int ModularController::getServo()
+{
+  return servo;
 }
 
 bool ModularController::setJointSpacePathFromPresent(std::vector<std::string> joint_name, std::vector<double> joint_angle, double path_time)
@@ -362,7 +397,7 @@ void ModularController::setGoal(char ch)
 
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
-    double path_time = 1.0;
+    double path_time = 2.0;
     joint_name.push_back("joint1"); joint_angle.push_back(0.0);
     joint_name.push_back("joint2"); joint_angle.push_back(0.0);
     joint_name.push_back("joint3"); joint_angle.push_back(0.0);
@@ -470,11 +505,7 @@ void ModularController::setGoal(char ch)
     joint_angle_gripper.push_back(gripper);
     setToolControl(joint_angle_gripper);
     setJointSpacePath(joint_name, joint_angle, path_time);
-
-
   }
-
-
 }
 
 void ModularController::restoreTerminalSettings(void)
@@ -496,11 +527,6 @@ int main(int argc, char **argv)
 {
   // Init ROS node
   ros::init(argc, argv, "modular_controller");
-  ros::NodeHandle nh;
-  ros::Subscriber topic_sub = nh.subscribe("hand_pose", 1000, handPoseCallback);
-  ros::Subscriber topic_sub_gripper = nh.subscribe("gripper_state", 1000, gripperCallback);
-  ros::Subscriber topic_sub_servos = nh.subscribe("selected_joint", 1000, servosCallback);
-  //ros::Subscriber topic_subs = nh.subscribe("/gripper_state", 1000, gripperCallback);
 
   ModularController modularController;
 
@@ -556,7 +582,7 @@ int main(int argc, char **argv)
       tiempoLimite++;
     }
     if(tiempoLimite >= 60){
-      printf("\nSe acabo los 30 segundos de uso");
+      printf("\nSe acabo los 60 segundos de uso");
       j2, j3, j4 = 0, 0, 0;
     }
   }

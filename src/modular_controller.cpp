@@ -13,8 +13,8 @@ ModularController::ModularController()
   ************************************************************/
   present_joint_angle_.resize(NUM_OF_JOINT);
   present_kinematic_position_.resize(3);
-  j2 = 0, j3 = 0, j4 = 0;
-  servo = 0;
+  j2 = 0, j3 = 0, j4 = 0, j2L = 0, j3L = 0, j4L = 0;
+  servo, servoL = 0;
 
   /************************************************************
   ** Initialize ROS Subscribers and Clients
@@ -48,6 +48,9 @@ void ModularController::initSubscriber()
   hand_pose_sub_ = node_handle_.subscribe("hand_pose", 1000, &ModularController::handPoseCallback, this);
   gripper_sub_ = node_handle_.subscribe("gripper_state", 1000, &ModularController::gripperCallback, this);
   servos_sub_ = node_handle_.subscribe("selected_joint", 1000, &ModularController::servosCallback, this);
+  hand_pose_sub_L_ = node_handle_.subscribe("hand_pose_left", 1000, &ModularController::handPoseLCallback, this);
+  gripper_sub_L_ = node_handle_.subscribe("gripper_state_left", 1000, &ModularController::gripperLCallback, this);
+  servos_sub_L_ = node_handle_.subscribe("selected_joint_left", 1000, &ModularController::servosLCallback, this);
 }
 
 void ModularController::jointStatesCallback(const sensor_msgs::JointState::ConstPtr &msg)
@@ -84,6 +87,19 @@ void ModularController::gripperCallback(const std_msgs::Bool::ConstPtr& msg){
 
 void ModularController::servosCallback(const std_msgs::Int32::ConstPtr& msg){
   servo = msg->data;
+}
+
+void ModularController::handPoseLCallback(const geometry_msgs::Pose::ConstPtr& msg){
+  tf::Quaternion q(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
+  tf::Matrix3x3(q).getRPY(rollL, pitchL, yawL);
+}
+
+void ModularController::gripperLCallback(const std_msgs::Bool::ConstPtr& msg){
+  gripperL = (msg->data) ? -0.01 : 0.01;
+}
+
+void ModularController::servosLCallback(const std_msgs::Int32::ConstPtr& msg){
+  servoL = msg->data;
 }
 
 std::vector<double> ModularController::getPresentJointAngle()

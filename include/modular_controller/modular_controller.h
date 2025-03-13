@@ -43,9 +43,9 @@ class ModularController
   *****************************************************************************/
   std::vector<double> present_joint_angle_;
   std::vector<double> present_kinematic_position_;
-  double roll, pitch, yaw, gripper;
-  double j2, j3, j4;
-  int servo;
+  double roll, pitch, yaw, gripper, rollL, pitchL, yawL, gripperL;
+  double j2, j3, j4, j2L, j3L, j4L;
+  int servo, servoL;
 
   /*****************************************************************************
   ** Init Functions
@@ -61,12 +61,18 @@ class ModularController
   ros::Subscriber hand_pose_sub_;
   ros::Subscriber gripper_sub_;
   ros::Subscriber servos_sub_;
+  ros::Subscriber hand_pose_sub_L_;
+  ros::Subscriber gripper_sub_L_;
+  ros::Subscriber servos_sub_L_;
 
   void jointStatesCallback(const sensor_msgs::JointState::ConstPtr &msg);
   void kinematicsPoseCallback(const open_manipulator_msgs::KinematicsPose::ConstPtr &msg);
   void handPoseCallback(const geometry_msgs::Pose::ConstPtr& msg);
   void gripperCallback(const std_msgs::Bool::ConstPtr& msg);
   void servosCallback(const std_msgs::Int32::ConstPtr& msg);
+  void handPoseLCallback(const geometry_msgs::Pose::ConstPtr& msg);
+  void gripperLCallback(const std_msgs::Bool::ConstPtr& msg);
+  void servosLCallback(const std_msgs::Int32::ConstPtr& msg);
 
   /*****************************************************************************
   ** ROS Clients and Callback Functions

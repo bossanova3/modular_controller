@@ -2,7 +2,7 @@
 #include "ros/ros.h"
 #include "tf/tf.h"
 
-double j2, j3, j4;
+double j2L, j3L, j4L;
 
 ModularController::ModularController()
 : node_handle_(""),
@@ -13,8 +13,8 @@ ModularController::ModularController()
   ************************************************************/
   present_joint_angle_.resize(NUM_OF_JOINT);
   present_kinematic_position_.resize(3);
-  j2 = 0, j3 = 0, j4 = 0;
-  servo = 0;
+  j2L = 0, j3L = 0, j4L = 0;
+  servoL = 0;
 
   /************************************************************
   ** Initialize ROS Subscribers and Clients
@@ -45,9 +45,9 @@ void ModularController::initSubscriber()
 {
   joint_states_sub_ = node_handle_.subscribe("joint_states", 10, &ModularController::jointStatesCallback, this);
   kinematics_pose_sub_ = node_handle_.subscribe("kinematics_pose", 10, &ModularController::kinematicsPoseCallback, this);
-  hand_pose_sub_ = node_handle_.subscribe("hand_pose", 1000, &ModularController::handPoseCallback, this);
-  gripper_sub_ = node_handle_.subscribe("gripper_state", 1000, &ModularController::gripperCallback, this);
-  servos_sub_ = node_handle_.subscribe("selected_joint", 1000, &ModularController::servosCallback, this);
+  hand_pose_sub_L_ = node_handle_.subscribe("hand_pose_left", 1000, &ModularController::handPoseLCallback, this);
+  gripper_sub_L_ = node_handle_.subscribe("gripper_state_left", 1000, &ModularController::gripperLCallback, this);
+  servos_sub_L_ = node_handle_.subscribe("selected_joint_left", 1000, &ModularController::servosLCallback, this);
 }
 
 void ModularController::jointStatesCallback(const sensor_msgs::JointState::ConstPtr &msg)
@@ -73,17 +73,17 @@ void ModularController::kinematicsPoseCallback(const open_manipulator_msgs::Kine
   present_kinematic_position_ = temp_position;
 }
 
-void ModularController::handPoseCallback(const geometry_msgs::Pose::ConstPtr& msg){
+void ModularController::handPoseLCallback(const geometry_msgs::Pose::ConstPtr& msg){
   tf::Quaternion q(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
-  tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+  tf::Matrix3x3(q).getRPY(rollL, pitchL, yawL);
 }
 
-void ModularController::gripperCallback(const std_msgs::Bool::ConstPtr& msg){
-  gripper = (msg->data) ? -0.01 : 0.01;
+void ModularController::gripperLCallback(const std_msgs::Bool::ConstPtr& msg){
+  gripperL = (msg->data) ? -0.01 : 0.01;
 }
 
-void ModularController::servosCallback(const std_msgs::Int32::ConstPtr& msg){
-  servo = msg->data;
+void ModularController::servosLCallback(const std_msgs::Int32::ConstPtr& msg){
+  servoL = msg->data;
 }
 
 std::vector<double> ModularController::getPresentJointAngle()
@@ -98,42 +98,42 @@ std::vector<double> ModularController::getPresentKinematicsPose()
 
 double ModularController::getRoll()
 {
-  return roll;
+  return rollL;
 }
 
 double ModularController::getPitch()
 {
-  return pitch;
+  return pitchL;
 }
 
 double ModularController::getYaw()
 {
-  return yaw;
+  return yawL;
 }
 
 double ModularController::getJ2()
 {
-  return j2;
+  return j2L;
 }
 
 double ModularController::getJ3()
 {
-  return j3;
+  return j3L;
 }
 
 double ModularController::getJ4()
 {
-  return j4;
+  return j4L;
 }
 
 double ModularController::getGripper()
 {
-  return gripper;
+  return gripperL;
 }
 
 int ModularController::getServo()
 {
-  return servo;
+  return servoL;
 }
 
 bool ModularController::setJointSpacePathFromPresent(std::vector<std::string> joint_name, std::vector<double> joint_angle, double path_time)
@@ -226,7 +226,7 @@ void ModularController::printText()
   printf("5 : pose modular parte 3\n");
   printf("6 : pose modular parte 4\n");
   printf("7 : algoritmo modular\n");
-  printf("8 : vr teleop modular\n");
+  printf("8 : vr teleop modular izquierda\n");
   printf("       \n");
   printf("q to quit\n");
   printf("---------------------------\n");
@@ -472,37 +472,37 @@ void ModularController::setGoal(char ch)
   else if (ch == '8')
   {
     printf("input : 8 \tpose modular VR\n");
-    printf("pitch = %.2f, roll = %.2f",pitch,roll);
+    printf("pitch = %.2f, roll = %.2f",pitchL,rollL);
 
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
     std::vector<double> joint_angle_gripper;
     double path_time = 1.0;
     
-    joint_name.push_back("joint1"); joint_angle.push_back(roll);
-    if(servo == 0)
+    joint_name.push_back("joint1"); joint_angle.push_back(rollL);
+    if(servoL == 0)
     {
-      joint_name.push_back("joint2"); joint_angle.push_back(pitch);
-      joint_name.push_back("joint3"); joint_angle.push_back(j3);
-      joint_name.push_back("joint4"); joint_angle.push_back(j4);
-      j2 = pitch;
+      joint_name.push_back("joint2"); joint_angle.push_back(pitchL);
+      joint_name.push_back("joint3"); joint_angle.push_back(j3L);
+      joint_name.push_back("joint4"); joint_angle.push_back(j4L);
+      j2L = pitchL;
 
     }
-    if(servo == 1)
+    if(servoL == 1)
     {
-      joint_name.push_back("joint2"); joint_angle.push_back(j2);
-      joint_name.push_back("joint3"); joint_angle.push_back(pitch);
-      joint_name.push_back("joint4"); joint_angle.push_back(j4);
-      j3 = pitch;
+      joint_name.push_back("joint2"); joint_angle.push_back(j2L);
+      joint_name.push_back("joint3"); joint_angle.push_back(pitchL);
+      joint_name.push_back("joint4"); joint_angle.push_back(j4L);
+      j3 = pitchL;
     }
-    if(servo == 2)
+    if(servoL == 2)
     {
-      joint_name.push_back("joint2"); joint_angle.push_back(j2);
-      joint_name.push_back("joint3"); joint_angle.push_back(j3);
-      joint_name.push_back("joint4"); joint_angle.push_back(pitch);
-      j4 = pitch;
+      joint_name.push_back("joint2"); joint_angle.push_back(j2L);
+      joint_name.push_back("joint3"); joint_angle.push_back(j3L);
+      joint_name.push_back("joint4"); joint_angle.push_back(pitchL);
+      j4L = pitchL;
     }
-    joint_angle_gripper.push_back(gripper);
+    joint_angle_gripper.push_back(gripperL);
     setToolControl(joint_angle_gripper);
     setJointSpacePath(joint_name, joint_angle, path_time);
   }
@@ -526,7 +526,7 @@ void ModularController::disableWaitingForEnter(void)
 int main(int argc, char **argv)
 {
   // Init ROS node
-  ros::init(argc, argv, "modular_controller");
+  ros::init(argc, argv, "modular_controller_left");
 
   ModularController modularController;
 
@@ -583,7 +583,7 @@ int main(int argc, char **argv)
     }
     if(tiempoLimite >= 60){
       printf("\nSe acabo los 60 segundos de uso");
-      j2, j3, j4 = 0, 0, 0;
+      j2L, j3L, j4L = 0, 0, 0;
     }
   }
 

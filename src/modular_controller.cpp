@@ -35,16 +35,16 @@ ModularController::~ModularController()
 
 void ModularController::initClient()
 {
-  goal_joint_space_path_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("goal_joint_space_path");
-  goal_joint_space_path_from_present_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("goal_joint_space_path_from_present");
-  goal_task_space_path_from_present_position_only_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetKinematicsPose>("goal_task_space_path_from_present_position_only");
-  goal_tool_control_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("goal_tool_control");
+  goal_joint_space_path_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot2/goal_joint_space_path");
+  goal_joint_space_path_from_present_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot2/goal_joint_space_path_from_present");
+  goal_task_space_path_from_present_position_only_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetKinematicsPose>("/robot2/goal_task_space_path_from_present_position_only");
+  goal_tool_control_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot2/goal_tool_control");
 }
 
 void ModularController::initSubscriber()
 {
-  joint_states_sub_ = node_handle_.subscribe("joint_states", 10, &ModularController::jointStatesCallback, this);
-  kinematics_pose_sub_ = node_handle_.subscribe("kinematics_pose", 10, &ModularController::kinematicsPoseCallback, this);
+  joint_states_sub_ = node_handle_.subscribe("/robot2/joint_states", 10, &ModularController::jointStatesCallback, this);
+  kinematics_pose_sub_ = node_handle_.subscribe("/robot2/gripper/kinematics_pose", 10, &ModularController::kinematicsPoseCallback, this);
   hand_pose_sub_ = node_handle_.subscribe("hand_pose", 1000, &ModularController::handPoseCallback, this);
   gripper_sub_ = node_handle_.subscribe("gripper_state", 1000, &ModularController::gripperCallback, this);
   servos_sub_ = node_handle_.subscribe("selected_joint", 1000, &ModularController::servosCallback, this);

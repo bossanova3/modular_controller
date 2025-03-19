@@ -35,16 +35,16 @@ ModularController::~ModularController()
 
 void ModularController::initClient()
 {
-  goal_joint_space_path_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("goal_joint_space_path");
-  goal_joint_space_path_from_present_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("goal_joint_space_path_from_present");
-  goal_task_space_path_from_present_position_only_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetKinematicsPose>("goal_task_space_path_from_present_position_only");
-  goal_tool_control_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("goal_tool_control");
+  goal_joint_space_path_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot1/goal_joint_space_path");
+  goal_joint_space_path_from_present_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot1/goal_joint_space_path_from_present");
+  goal_task_space_path_from_present_position_only_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetKinematicsPose>("/robot1/goal_task_space_path_from_present_position_only");
+  goal_tool_control_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot1/goal_tool_control");
 }
 
 void ModularController::initSubscriber()
 {
-  joint_states_sub_ = node_handle_.subscribe("joint_states", 10, &ModularController::jointStatesCallback, this);
-  kinematics_pose_sub_ = node_handle_.subscribe("kinematics_pose", 10, &ModularController::kinematicsPoseCallback, this);
+  joint_states_sub_ = node_handle_.subscribe("/robot1/joint_states", 10, &ModularController::jointStatesCallback, this);
+  kinematics_pose_sub_ = node_handle_.subscribe("/robot1/gripper/kinematics_pose", 10, &ModularController::kinematicsPoseCallback, this);
   hand_pose_sub_L_ = node_handle_.subscribe("hand_pose_left", 1000, &ModularController::handPoseLCallback, this);
   gripper_sub_L_ = node_handle_.subscribe("gripper_state_left", 1000, &ModularController::gripperLCallback, this);
   servos_sub_L_ = node_handle_.subscribe("selected_joint_left", 1000, &ModularController::servosLCallback, this);
@@ -479,28 +479,28 @@ void ModularController::setGoal(char ch)
     std::vector<double> joint_angle_gripper;
     double path_time = 1.0;
     
-    joint_name.push_back("joint1"); joint_angle.push_back(rollL);
+    joint_name.push_back("joint1"); joint_angle.push_back(-rollL);
     if(servoL == 0)
     {
-      joint_name.push_back("joint2"); joint_angle.push_back(pitchL);
+      joint_name.push_back("joint2"); joint_angle.push_back(-pitchL);
       joint_name.push_back("joint3"); joint_angle.push_back(j3L);
       joint_name.push_back("joint4"); joint_angle.push_back(j4L);
-      j2L = pitchL;
+      j2L = -pitchL;
 
     }
     if(servoL == 1)
     {
       joint_name.push_back("joint2"); joint_angle.push_back(j2L);
-      joint_name.push_back("joint3"); joint_angle.push_back(pitchL);
+      joint_name.push_back("joint3"); joint_angle.push_back(-pitchL);
       joint_name.push_back("joint4"); joint_angle.push_back(j4L);
-      j3 = pitchL;
+      j3 = -pitchL;
     }
     if(servoL == 2)
     {
       joint_name.push_back("joint2"); joint_angle.push_back(j2L);
       joint_name.push_back("joint3"); joint_angle.push_back(j3L);
-      joint_name.push_back("joint4"); joint_angle.push_back(pitchL);
-      j4L = pitchL;
+      joint_name.push_back("joint4"); joint_angle.push_back(-pitchL);
+      j4L = -pitchL;
     }
     joint_angle_gripper.push_back(gripperL);
     setToolControl(joint_angle_gripper);

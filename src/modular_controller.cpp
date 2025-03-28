@@ -43,8 +43,6 @@ void ModularController::initClient()
 
 void ModularController::initSubscriber()
 {
-  joint_states_sub_ = node_handle_.subscribe("/robot2/joint_states", 10, &ModularController::jointStatesCallback, this);
-  kinematics_pose_sub_ = node_handle_.subscribe("/robot2/gripper/kinematics_pose", 10, &ModularController::kinematicsPoseCallback, this);
   hand_pose_sub_ = node_handle_.subscribe("hand_pose", 1000, &ModularController::handPoseCallback, this);
   gripper_sub_ = node_handle_.subscribe("gripper_state", 1000, &ModularController::gripperCallback, this);
   servos_sub_ = node_handle_.subscribe("selected_joint", 1000, &ModularController::servosCallback, this);
@@ -423,7 +421,7 @@ void ModularController::setGoal(char ch)
 
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
-    double path_time = 2.0;
+    double path_time = 1.0;
     joint_name.push_back("joint1"); joint_angle.push_back(-0.890);
     joint_name.push_back("joint2"); joint_angle.push_back(-0.089);
     joint_name.push_back("joint3"); joint_angle.push_back(-0.146);
@@ -436,7 +434,7 @@ void ModularController::setGoal(char ch)
 
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
-    double path_time = 2.0;
+    double path_time = 1.0;
     joint_name.push_back("joint1"); joint_angle.push_back(-0.890);
     joint_name.push_back("joint2"); joint_angle.push_back(0.373);
     joint_name.push_back("joint3"); joint_angle.push_back(0.675);
@@ -449,7 +447,7 @@ void ModularController::setGoal(char ch)
 
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
-    double path_time = 2.0;
+    double path_time = 1.0;
     joint_name.push_back("joint1"); joint_angle.push_back(0.877);
     joint_name.push_back("joint2"); joint_angle.push_back(0.126);
     joint_name.push_back("joint3"); joint_angle.push_back(-0.233);
@@ -462,7 +460,7 @@ void ModularController::setGoal(char ch)
 
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
-    double path_time = 2.0;
+    double path_time = 1.0;
     joint_name.push_back("joint1"); joint_angle.push_back(0.874);
     joint_name.push_back("joint2"); joint_angle.push_back(0.471);
     joint_name.push_back("joint3"); joint_angle.push_back(0.371);
@@ -477,7 +475,7 @@ void ModularController::setGoal(char ch)
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
     std::vector<double> joint_angle_gripper;
-    double path_time = 1.0;
+    double path_time = 0.7;
     
     joint_name.push_back("joint1"); joint_angle.push_back(roll);
     if(servo == 0)
@@ -575,15 +573,17 @@ int main(int argc, char **argv)
       modularController.setGoal('2');
       sleep(3);
     }
-    while(ch == '8' && tiempoLimite < 60){
+    while(ch == '8' && tiempoLimite < 30){
       ros::spinOnce();
+      usleep(750000);
       modularController.setGoal('8');
-      usleep(700000);
       tiempoLimite++;
     }
-    if(tiempoLimite >= 60){
-      printf("\nSe acabo los 60 segundos de uso");
-      j2, j3, j4 = 0, 0, 0;
+    if(tiempoLimite >= 30){
+      printf("\nSe acabo los 30 segundos de uso");
+      j2 = 0;
+      j3 = 0;
+      j4 = 0;
     }
   }
 

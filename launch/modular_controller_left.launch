@@ -1,9 +1,9 @@
 <launch>
   <arg name="robot_name"   default="open_manipulator"/>
   <arg name="end_effector" default="gripper"/>
-    
-    <!-- Right Robot -->
-    <node name="mdlr_controller_right" pkg="modular_controller" type="modular_controller" output="screen">
+
+    <!-- Left Robot -->
+    <node name="mdlr_controller_left" pkg="modular_controller" type="modular_controller_twoHands" output="screen">
       <remap from="kinematics_pose" to="$(arg end_effector)/kinematics_pose"/>
       <param name="end_effector_name" value="$(arg end_effector)"/>
     </node>

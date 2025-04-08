@@ -2,7 +2,37 @@
 #include "ros/ros.h"
 #include "tf/tf.h"
 
-double j2L, j3L, j4L;
+double jo1L, j2L, j3L, j4L;
+bool inicio;
+
+class KalmanFilter {
+  private:
+      double x_est; // Estado estimado
+      double p_est; // Covarianza del error estimado
+      double q;     // Ruido del proceso
+      double r;     // Ruido de la medición
+  public:
+      KalmanFilter(double process_noise, double measurement_noise, double initial_estimate)
+          : x_est(initial_estimate), p_est(1.0), q(process_noise), r(measurement_noise) {}
+  
+      double update(double measurement) {
+          // Predicción
+          double x_pred = x_est;
+          double p_pred = p_est + q;
+          
+          // Corrección
+          double k = p_pred / (p_pred + r); // Ganancia de Kalman
+          x_est = x_pred + k * (measurement - x_pred);
+          p_est = (1 - k) * p_pred;
+          
+          return x_est;
+      }
+  };
+
+KalmanFilter kf1(0.001, 0.1, 0.0);
+KalmanFilter kf2(0.001, 0.1, 0.0);
+KalmanFilter kf3(0.01, 0.1, 0.0);
+KalmanFilter kf4(0.01, 0.1, 0.0);
 
 ModularController::ModularController()
 : node_handle_(""),
@@ -13,7 +43,7 @@ ModularController::ModularController()
   ************************************************************/
   present_joint_angle_.resize(NUM_OF_JOINT);
   present_kinematic_position_.resize(3);
-  j2L = 0, j3L = 0, j4L = 0;
+  jo1L = 0, j2L = 0, j3L = 0, j4L = 0;
   servoL = 0;
 
   /************************************************************
@@ -475,31 +505,37 @@ void ModularController::setGoal(char ch)
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
     std::vector<double> joint_angle_gripper;
-    double path_time = 0.7;
-    
-    joint_name.push_back("joint1"); joint_angle.push_back(-rollL);
+    double path_time = 0.035;
+    jo1L = -rollL;
+
+    if(inicio == true){
+      joint_name.push_back("joint1"); joint_angle.push_back(kf2.update(jo1L));
+      joint_name.push_back("joint2"); joint_angle.push_back(kf2.update(j2L));
+      joint_name.push_back("joint3"); joint_angle.push_back(kf3.update(j3L));
+      joint_name.push_back("joint4"); joint_angle.push_back(kf4.update(j4L));
+      joint_angle_gripper.push_back(gripperL);
+      setToolControl(joint_angle_gripper);
+      setJointSpacePath(joint_name, joint_angle, 0.9);
+      sleep(1);
+      inicio = false;
+    }
+
+    joint_name.push_back("joint1"); joint_angle.push_back(kf1.update(jo1L));
     if(servoL == 0)
     {
-      joint_name.push_back("joint2"); joint_angle.push_back(-pitchL);
-      joint_name.push_back("joint3"); joint_angle.push_back(j3L);
-      joint_name.push_back("joint4"); joint_angle.push_back(j4L);
       j2L = -pitchL;
-
     }
     if(servoL == 1)
     {
-      joint_name.push_back("joint2"); joint_angle.push_back(j2L);
-      joint_name.push_back("joint3"); joint_angle.push_back(-pitchL);
-      joint_name.push_back("joint4"); joint_angle.push_back(j4L);
-      j3 = -pitchL;
+      j3L = -pitchL;
     }
     if(servoL == 2)
     {
-      joint_name.push_back("joint2"); joint_angle.push_back(j2L);
-      joint_name.push_back("joint3"); joint_angle.push_back(j3L);
-      joint_name.push_back("joint4"); joint_angle.push_back(-pitchL);
       j4L = -pitchL;
     }
+    joint_name.push_back("joint2"); joint_angle.push_back(kf2.update(j2L));
+    joint_name.push_back("joint3"); joint_angle.push_back(kf3.update(j3L));
+    joint_name.push_back("joint4"); joint_angle.push_back(kf4.update(j4L));
     joint_angle_gripper.push_back(gripperL);
     setToolControl(joint_angle_gripper);
     setJointSpacePath(joint_name, joint_angle, path_time);
@@ -536,6 +572,7 @@ int main(int argc, char **argv)
     ros::spinOnce();
     modularController.printText();
     tiempoLimite = 0;
+    inicio = true;
     ros::spinOnce();
     modularController.setGoal(ch);
     if(ch == '7'){
@@ -573,14 +610,15 @@ int main(int argc, char **argv)
       modularController.setGoal('2');
       sleep(3);
     }
-    while(ch == '8' && tiempoLimite < 30){
+    while(ch == '8' && tiempoLimite < 375){
       ros::spinOnce();
-      usleep(750000);
+      usleep(40000);
       modularController.setGoal('8');
       tiempoLimite++;
     }
-    if(tiempoLimite >= 30){
+    if(tiempoLimite >= 375){
       printf("\nSe acabo los 30 segundos de uso");
+      jo1L = 0;
       j2L = 0;
       j3L = 0;
       j4L = 0;

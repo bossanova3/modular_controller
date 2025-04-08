@@ -44,7 +44,7 @@ class ModularController
   std::vector<double> present_joint_angle_;
   std::vector<double> present_kinematic_position_;
   double roll, pitch, yaw, gripper, rollL, pitchL, yawL, gripperL;
-  double j2, j3, j4, j2L, j3L, j4L;
+  double j1, j2, j3, j4, j1L, j2L, j3L, j4L;
   int servo, servoL;
 
   /*****************************************************************************

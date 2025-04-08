@@ -44,6 +44,9 @@ target_link_libraries(hand_pose_test ${catkin_LIBRARIES} )
 target_link_libraries(gripper_test ${catkin_LIBRARIES} )
 target_link_libraries(servos_test ${catkin_LIBRARIES} )
 
+
+
+
 ################################################################################
 # Install
 ################################################################################

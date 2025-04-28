@@ -2,9 +2,17 @@
 #include "ros/ros.h"
 #include "tf/tf.h"
 #include <fstream>
+#include <onnxruntime_cxx_api.h>
 
 double jo1, j2, j3, j4;
+float rnn_roll, rnn_pitch, rnn_yaw;
 bool inicio;
+
+Ort::Env* env;
+Ort::Session* session;
+// Nombres de input/output del modelo
+const char* input_names[] = {"input"};
+const char* output_names[] = {"dense"};
 
 class KalmanFilter {
   private:
@@ -105,6 +113,37 @@ void ModularController::kinematicsPoseCallback(const open_manipulator_msgs::Kine
 void ModularController::handPoseCallback(const geometry_msgs::Pose::ConstPtr& msg){
   tf::Quaternion q(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
   tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+
+      // -------- PREPARAR LA ENTRADA PARA LA RNN --------
+      std::vector<float> input_tensor_values = {static_cast<float>(roll), static_cast<float>(pitch), static_cast<float>(yaw)};
+      std::array<int64_t, 3> input_shape = {1, 1, 3}; // batch_size=1, seq_len=1, input_size=3
+  
+      Ort::MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+      Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
+          memory_info,
+          input_tensor_values.data(),
+          input_tensor_values.size(),
+          input_shape.data(),
+          input_shape.size()
+      );
+  
+      // -------- HACER LA PREDICCIÓN CON LA RNN --------
+      auto output_tensors = session->Run(
+          Ort::RunOptions{nullptr},
+          input_names,
+          &input_tensor,
+          1,
+          output_names,
+          1
+      );
+  
+      // Obtener la salida
+      float* output_data = output_tensors.front().GetTensorMutableData<float>();
+  
+      // Por ejemplo, si la RNN saca también 3 valores
+      rnn_roll = output_data[0];
+      rnn_pitch = output_data[1];
+      rnn_yaw = output_data[2];
 }
 
 void ModularController::gripperCallback(const std_msgs::Bool::ConstPtr& msg){
@@ -501,16 +540,17 @@ void ModularController::setGoal(char ch)
   else if (ch == '8')
   {
     printf("input : 8 \tpose modular VR\n");
-    printf("pitch = %.2f, roll = %.2f",pitch,roll);
+    printf("pitch = %.2f, roll = %.2f\n",pitch,roll);
+    printf("rnn_pitch = %.2f, rnn_roll = %.2f\n",rnn_pitch,rnn_roll);
 
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
     std::vector<double> joint_angle_gripper;
     double path_time = 0.035;
-    jo1 = roll;
+    jo1 = rnn_roll;
 
     if(inicio == true){
-      joint_name.push_back("joint1"); joint_angle.push_back(kf2.update(jo1));
+      joint_name.push_back("joint1"); joint_angle.push_back(kf1.update(jo1));
       joint_name.push_back("joint2"); joint_angle.push_back(kf2.update(j2));
       joint_name.push_back("joint3"); joint_angle.push_back(kf3.update(j3));
       joint_name.push_back("joint4"); joint_angle.push_back(kf4.update(j4));
@@ -524,15 +564,15 @@ void ModularController::setGoal(char ch)
     joint_name.push_back("joint1"); joint_angle.push_back(kf1.update(jo1));
     if(servo == 0)
     {
-      j2 = pitch;
+      j2 = rnn_pitch;
     }
     if(servo == 1)
     {
-      j3 = pitch;
+      j3 = rnn_pitch;
     }
     if(servo == 2)
     {
-      j4 = pitch;
+      j4 = rnn_pitch;
     }
     joint_name.push_back("joint2"); joint_angle.push_back(kf2.update(j2));
     joint_name.push_back("joint3"); joint_angle.push_back(kf3.update(j3));
@@ -562,6 +602,19 @@ int main(int argc, char **argv)
 {
   // Init ROS node
   ros::init(argc, argv, "modular_controller");
+
+  try {
+    env = new Ort::Env(ORT_LOGGING_LEVEL_WARNING, "ONNXRuntimeModel");
+    Ort::SessionOptions session_options;
+    session_options.SetIntraOpNumThreads(1);
+
+    session = new Ort::Session(*env, "/home/scf-usuario2/catkin_ws/src/modular_controller/modelo_rnn.onnx", session_options);
+
+    ROS_INFO("Modelo RNN cargado correctamente.");
+  } catch (const Ort::Exception& e) {
+    ROS_ERROR("Error cargando el modelo ONNX: %s", e.what());
+    return -1;
+  }
 
   ModularController modularController;
 

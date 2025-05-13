@@ -4,13 +4,13 @@
 #include <fstream>
 #include <onnxruntime_cxx_api.h>
 
-double jo1, j2, j3, j4;
+double jo1L, j2L, j3L, j4L;
 float rnn_roll, rnn_pitch, rnn_yaw;
 bool inicio;
 
 Ort::Env* env;
 Ort::Session* session;
-
+// Nombres de input/output del modelo
 const char* input_names[] = {"input"};
 const char* output_names[] = {"dense"};
 
@@ -52,8 +52,8 @@ ModularController::ModularController()
   ************************************************************/
   present_joint_angle_.resize(NUM_OF_JOINT);
   present_kinematic_position_.resize(3);
-  jo1 = 0, j2 = 0, j3 = 0, j4 = 0;
-  servo = 0;
+  jo1L = 0, j2L = 0, j3L = 0, j4L = 0;
+  servoL = 0;
 
   /************************************************************
   ** Initialize ROS Subscribers and Clients
@@ -74,17 +74,17 @@ ModularController::~ModularController()
 
 void ModularController::initClient()
 {
-  goal_joint_space_path_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot2/goal_joint_space_path");
-  goal_joint_space_path_from_present_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot2/goal_joint_space_path_from_present");
-  goal_task_space_path_from_present_position_only_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetKinematicsPose>("/robot2/goal_task_space_path_from_present_position_only");
-  goal_tool_control_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot2/goal_tool_control");
+  goal_joint_space_path_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot1/goal_joint_space_path");
+  goal_joint_space_path_from_present_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot1/goal_joint_space_path_from_present");
+  goal_task_space_path_from_present_position_only_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetKinematicsPose>("/robot1/goal_task_space_path_from_present_position_only");
+  goal_tool_control_client_ = node_handle_.serviceClient<open_manipulator_msgs::SetJointPosition>("/robot1/goal_tool_control");
 }
 
 void ModularController::initSubscriber()
 {
-  hand_pose_sub_ = node_handle_.subscribe("hand_pose", 1000, &ModularController::handPoseCallback, this);
-  gripper_sub_ = node_handle_.subscribe("gripper_state", 1000, &ModularController::gripperCallback, this);
-  servos_sub_ = node_handle_.subscribe("selected_joint", 1000, &ModularController::servosCallback, this);
+  hand_pose_sub_L_ = node_handle_.subscribe("hand_pose_left", 1000, &ModularController::handPoseLCallback, this);
+  gripper_sub_L_ = node_handle_.subscribe("gripper_state_left", 1000, &ModularController::gripperLCallback, this);
+  servos_sub_L_ = node_handle_.subscribe("selected_joint_left", 1000, &ModularController::servosLCallback, this);
 }
 
 void ModularController::jointStatesCallback(const sensor_msgs::JointState::ConstPtr &msg)
@@ -110,12 +110,12 @@ void ModularController::kinematicsPoseCallback(const open_manipulator_msgs::Kine
   present_kinematic_position_ = temp_position;
 }
 
-void ModularController::handPoseCallback(const geometry_msgs::Pose::ConstPtr& msg){
+void ModularController::handPoseLCallback(const geometry_msgs::Pose::ConstPtr& msg){
   tf::Quaternion q(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
-  tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+  tf::Matrix3x3(q).getRPY(rollL, pitchL, yawL);
 
       // -------- PREPARAR LA ENTRADA PARA LA RNN --------
-      std::vector<float> input_tensor_values = {static_cast<float>(roll), static_cast<float>(pitch), static_cast<float>(yaw)};
+      std::vector<float> input_tensor_values = {static_cast<float>(rollL), static_cast<float>(pitchL), static_cast<float>(yawL)};
       std::array<int64_t, 3> input_shape = {1, 1, 3}; // batch_size=1, seq_len=1, input_size=3
   
       Ort::MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
@@ -140,17 +140,18 @@ void ModularController::handPoseCallback(const geometry_msgs::Pose::ConstPtr& ms
       // Obtener la salida
       float* output_data = output_tensors.front().GetTensorMutableData<float>();
   
+      // Por ejemplo, si la RNN saca también 3 valores
       rnn_roll = output_data[0];
       rnn_pitch = output_data[1];
       rnn_yaw = output_data[2];
 }
 
-void ModularController::gripperCallback(const std_msgs::Bool::ConstPtr& msg){
-  gripper = (msg->data) ? -0.01 : 0.01;
+void ModularController::gripperLCallback(const std_msgs::Bool::ConstPtr& msg){
+  gripperL = (msg->data) ? -0.01 : 0.01;
 }
 
-void ModularController::servosCallback(const std_msgs::Int32::ConstPtr& msg){
-  servo = msg->data;
+void ModularController::servosLCallback(const std_msgs::Int32::ConstPtr& msg){
+  servoL = msg->data;
 }
 
 std::vector<double> ModularController::getPresentJointAngle()
@@ -165,42 +166,42 @@ std::vector<double> ModularController::getPresentKinematicsPose()
 
 double ModularController::getRoll()
 {
-  return roll;
+  return rollL;
 }
 
 double ModularController::getPitch()
 {
-  return pitch;
+  return pitchL;
 }
 
 double ModularController::getYaw()
 {
-  return yaw;
+  return yawL;
 }
 
 double ModularController::getJ2()
 {
-  return j2;
+  return j2L;
 }
 
 double ModularController::getJ3()
 {
-  return j3;
+  return j3L;
 }
 
 double ModularController::getJ4()
 {
-  return j4;
+  return j4L;
 }
 
 double ModularController::getGripper()
 {
-  return gripper;
+  return gripperL;
 }
 
 int ModularController::getServo()
 {
-  return servo;
+  return servoL;
 }
 
 bool ModularController::setJointSpacePathFromPresent(std::vector<std::string> joint_name, std::vector<double> joint_angle, double path_time)
@@ -293,7 +294,7 @@ void ModularController::printText()
   printf("5 : pose modular parte 3\n");
   printf("6 : pose modular parte 4\n");
   printf("7 : algoritmo modular\n");
-  printf("8 : vr teleop modular\n");
+  printf("8 : vr teleop modular izquierda\n");
   printf("       \n");
   printf("q to quit\n");
   printf("---------------------------\n");
@@ -539,44 +540,44 @@ void ModularController::setGoal(char ch)
   else if (ch == '8')
   {
     printf("input : 8 \tpose modular VR\n");
-    printf("pitch = %.2f, roll = %.2f\n",pitch,roll);
+    printf("pitch = %.2f, roll = %.2f\n",pitchL,rollL);
     printf("rnn_pitch = %.2f, rnn_roll = %.2f\n",rnn_pitch,rnn_roll);
 
     std::vector<std::string> joint_name;
     std::vector<double> joint_angle;
     std::vector<double> joint_angle_gripper;
     double path_time = 0.035;
-    jo1 = rnn_roll;
+    jo1L = -rnn_roll;
 
     if(inicio == true){
-      joint_name.push_back("joint1"); joint_angle.push_back(kf1.update(jo1));
-      joint_name.push_back("joint2"); joint_angle.push_back(kf2.update(j2));
-      joint_name.push_back("joint3"); joint_angle.push_back(kf3.update(j3));
-      joint_name.push_back("joint4"); joint_angle.push_back(kf4.update(j4));
-      joint_angle_gripper.push_back(gripper);
+      joint_name.push_back("joint1"); joint_angle.push_back(kf1.update(jo1L));
+      joint_name.push_back("joint2"); joint_angle.push_back(kf2.update(j2L));
+      joint_name.push_back("joint3"); joint_angle.push_back(kf3.update(j3L));
+      joint_name.push_back("joint4"); joint_angle.push_back(kf4.update(j4L));
+      joint_angle_gripper.push_back(gripperL);
       setToolControl(joint_angle_gripper);
       setJointSpacePath(joint_name, joint_angle, 0.9);
       sleep(1);
       inicio = false;
     }
 
-    joint_name.push_back("joint1"); joint_angle.push_back(kf1.update(jo1));
-    if(servo == 0)
+    joint_name.push_back("joint1"); joint_angle.push_back(kf1.update(jo1L));
+    if(servoL == 0)
     {
-      j2 = rnn_pitch;
+      j2L = -rnn_pitch;
     }
-    if(servo == 1)
+    if(servoL == 1)
     {
-      j3 = rnn_pitch;
+      j3L = -rnn_pitch;
     }
-    if(servo == 2)
+    if(servoL == 2)
     {
-      j4 = rnn_pitch;
+      j4L = -rnn_pitch;
     }
-    joint_name.push_back("joint2"); joint_angle.push_back(kf2.update(j2));
-    joint_name.push_back("joint3"); joint_angle.push_back(kf3.update(j3));
-    joint_name.push_back("joint4"); joint_angle.push_back(kf4.update(j4));
-    joint_angle_gripper.push_back(gripper);
+    joint_name.push_back("joint2"); joint_angle.push_back(kf2.update(j2L));
+    joint_name.push_back("joint3"); joint_angle.push_back(kf3.update(j3L));
+    joint_name.push_back("joint4"); joint_angle.push_back(kf4.update(j4L));
+    joint_angle_gripper.push_back(gripperL);
     setToolControl(joint_angle_gripper);
     setJointSpacePath(joint_name, joint_angle, path_time);
   }
@@ -600,7 +601,7 @@ void ModularController::disableWaitingForEnter(void)
 int main(int argc, char **argv)
 {
   // Init ROS node
-  ros::init(argc, argv, "modular_controller");
+  ros::init(argc, argv, "modular_controller_left");
 
   try {
     env = new Ort::Env(ORT_LOGGING_LEVEL_WARNING, "ONNXRuntimeModel");
@@ -671,10 +672,10 @@ int main(int argc, char **argv)
     }
     if(tiempoLimite >= 375){
       printf("\nSe acabo los 30 segundos de uso");
-      jo1 = 0;
-      j2 = 0;
-      j3 = 0;
-      j4 = 0;
+      jo1L = 0;
+      j2L = 0;
+      j3L = 0;
+      j4L = 0;
     }
   }
 

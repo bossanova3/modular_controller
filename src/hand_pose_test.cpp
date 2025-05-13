@@ -148,14 +148,6 @@ int main(int argc, char **argv){
 
         session = new Ort::Session(*env, "/home/scf-usuario2/catkin_ws/src/modular_controller/modelo_rnn.onnx", session_options);
 
-      /*  size_t num_outputs = session->GetOutputCount();
-        Ort::AllocatorWithDefaultOptions allocator;
-        for (size_t i = 0; i < num_outputs; ++i) {
-            char* output_name_cstr = session->GetOutputNameAllocated(i, allocator).release(); // 
-            ROS_INFO("Output %zu name: %s", i, output_name_cstr);
-            allocator.Free(output_name_cstr);    
-        }*/
-
         ROS_INFO("Modelo RNN cargado correctamente.");
     } catch (const Ort::Exception& e) {
         ROS_ERROR("Error cargando el modelo ONNX: %s", e.what());

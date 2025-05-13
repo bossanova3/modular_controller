@@ -10,7 +10,7 @@ bool inicio;
 
 Ort::Env* env;
 Ort::Session* session;
-// Nombres de input/output del modelo
+
 const char* input_names[] = {"input"};
 const char* output_names[] = {"dense"};
 
@@ -140,7 +140,6 @@ void ModularController::handPoseCallback(const geometry_msgs::Pose::ConstPtr& ms
       // Obtener la salida
       float* output_data = output_tensors.front().GetTensorMutableData<float>();
   
-      // Por ejemplo, si la RNN saca también 3 valores
       rnn_roll = output_data[0];
       rnn_pitch = output_data[1];
       rnn_yaw = output_data[2];
